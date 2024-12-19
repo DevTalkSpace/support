@@ -1,0 +1,45 @@
+name: Automated Invitation
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  handle_label:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if Label is 'invite me to the community'
+        id: check_label
+        run: |
+          if [[ "${{ github.event.label.name }}" != "invite me to the community" ]]; then
+            echo "Label is not 'invite me to the community'. Exiting."
+            exit 0
+          fi
+
+      - name: Close Original Issue in Support Repository
+        if: ${{ steps.check_label.outcome == 'success' }}
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
+
+      - name: Invite on Label
+        if: ${{ steps.check_label.outcome == 'success' }}
+        uses: vj-abigo/invite-on-label@v1.2
+        with:
+          organization: DevTalkSpace
+          label: invite me to the community
+          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          comment: |
+            <b>An invitation has been sent to join the GitHub organization. Welcome to the community! 🎉</b><br><br>
+            After accepting, remember to make it public so it appears on your GitHub profile for everyone to see. To do this, go to the GitHub organization list, find your name, and change the dropdown to 'Public': https://github.com/orgs/DevTalkSpace/people.<br><br>
+        env:
+          INVITE_TOKEN: ${{ secrets.INVITE_TOKEN }}
